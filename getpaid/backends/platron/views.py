@@ -29,11 +29,11 @@ class OnlineView(View):
 
 
 class CheckView(OnlineView):
-    script_name = 'check.php'
+    script_name = 'check'
 
 
 class ResultView(OnlineView):
-    script_name = 'result.php'
+    script_name = 'result'
 
 
 class SuccessView(DetailView):

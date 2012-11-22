@@ -392,17 +392,17 @@ class PlatronBackendTest(TestCase):
         self.assertEqual(url, '/getpaid.backends.platron/failure/99/?pg_error_code=101&pg_error_description=Empty+merchant')
 
     def test_online_wrong_sig(self):
-        self.assertEqual('SIG ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'xxxx'), 'check.php'))
-        self.assertNotEqual('SIG ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'd63da16a216d036eb4e1946688dc8f90'), 'check.php'))
+        self.assertEqual('SIG ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'xxxx'), 'check'))
+        self.assertNotEqual('SIG ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'ed57bad3c1b30649033bb7b3e3d33b86'), 'check'))
 
     def test_online_wrong_currency(self):
-        self.assertEqual('CUR ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'EUR', 'd8499a3d89667f172f0f813529f2b398'), 'check.php'))
-        self.assertNotEqual('CUR ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'd63da16a216d036eb4e1946688dc8f90'), 'check.php'))
+        self.assertEqual('CUR ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'EUR', '78ae32e1e005d37d56be3342a292050b'), 'check'))
+        self.assertNotEqual('CUR ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'ed57bad3c1b30649033bb7b3e3d33b86'), 'check'))
 
     def test_online_crc_error(self):
         # TODO
-        self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1111', 'RUR', '14a7728cbdc3abde94cca583e5f7e9f4'), 'check.php'))
-        self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'd63da16a216d036eb4e1946688dc8f90'), 'check.php'))
+        self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1111', 'RUR', 'e2947c340f12b8878fd86decdf09df37'), 'check'))
+        self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'ed57bad3c1b30649033bb7b3e3d33b86'), 'check'))
 
     def test_online_malformed(self):
         response = self.client.post(reverse('getpaid-platron-check'), {})
@@ -414,17 +414,20 @@ class PlatronBackendTest(TestCase):
 
         response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1234', 'RUR', 'xxxx')})
         self.assertContains(response, '<pg_status>error</pg_status>')
-        response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1234', 'EUR', 'd63da16a216d036eb4e1946688dc8f90')})
+        response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1234', 'EUR', '78ae32e1e005d37d56be3342a292050b')})
         self.assertContains(response, '<pg_status>error</pg_status>')
-        response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1111', 'RUR', 'd63da16a216d036eb4e1946688dc8f90')})
+        response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1111', 'RUR', 'e2947c340f12b8878fd86decdf09df37')})
         self.assertContains(response, '<pg_status>error</pg_status>')
+        #TODO: with payment
+        #response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1234', 'RUR', 'ed57bad3c1b30649033bb7b3e3d33b86')})
+        #self.assertContains(response, '<pg_status>ok</pg_status>')
 
         Payment = get_model('getpaid', 'Payment')
         order = Order(name='Test EUR order', total='100.00', currency='RUR')
         order.save()
         payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
         payment.save(force_insert=True)
-        response = self.client.post(result_url, {'pg_xml': self.xml_result % (payment.pk, '1', 'e668147fe238a3053d7aa1328749d31d')})
+        response = self.client.post(result_url, {'pg_xml': self.xml_result % (payment.pk, '1', '9b1a28ddd3a7317c5916a0bf42b2756c')})
         self.assertContains(response, '<pg_status>ok</pg_status>')
 
     def test_online_payment_ok(self):
