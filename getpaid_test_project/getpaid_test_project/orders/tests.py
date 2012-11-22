@@ -7,6 +7,7 @@ Replace this with more appropriate tests for your application.
 from decimal import Decimal
 from django.core.urlresolvers import reverse
 from django.db.models.loading import get_model
+from django.test.client import RequestFactory
 
 from django.test import TestCase
 from django.test.client import Client
@@ -288,3 +289,170 @@ class TransferujBackendTest(TestCase):
         self.assertEqual(payment.status, 'failed')
 
 
+def platron_fake_success_init_payment(request):
+    class fake_response:
+        def read(self):
+            return """<?xml version="1.0" encoding="utf-8"?>
+                        <response>
+                            <pg_salt>ijoi894j4ik39lo9</pg_salt>
+                            <pg_status>ok</pg_status>
+                            <pg_payment_id>15826</pg_payment_id>
+                            <pg_redirect_url>https://www.platron.ru/payment_params.php?customer=ccaa41a4f425d124a23c3a53a3140bdc15826</pg_redirect_url>
+                            <pg_redirect_url_type>need data</pg_redirect_url_type>
+                            <pg_sig>af8e41a4f425d124a23c3a53a3140bdc17ea0</pg_sig>
+                        </response>"""
+    return fake_response()
+
+
+def platron_fake_fail_init_payment(request):
+    class fake_response:
+        def read(self):
+            return """<?xml version="1.0" encoding="utf-8"?>
+                        <response>
+                            <pg_status>error</pg_status>
+                            <pg_error_code>101</pg_error_code>
+                            <pg_error_description>Empty merchant</pg_error_description>
+                        </response>"""
+    return fake_response()
+
+
+class PlatronBackendTest(TestCase):
+    xml_check = """<?xml version="1.0" encoding="utf-8"?>
+                    <request>
+                        <pg_salt>qwertyuiop</pg_salt>
+                        <pg_order_id>%s</pg_order_id>
+                        <pg_payment_id>567890</pg_payment_id>
+                        <pg_payment_system>WEBMONEYR</pg_payment_system>
+                        <pg_amount>100.00</pg_amount>
+                        <pg_currency>RUR</pg_currency>
+                        <pg_ps_currency>%s</pg_ps_currency>
+                        <pg_ps_amount>100.00</pg_ps_amount>
+                        <pg_ps_full_amount>100.00</pg_ps_full_amount>
+                        <uservar1>121212</uservar1>
+                        <pg_sig>%s</pg_sig>
+                    </request>
+                    """
+
+    xml_result = """<?xml version="1.0" encoding="utf-8"?>
+                    <request>
+                        <pg_salt>8765</pg_salt>
+                        <pg_order_id>%s</pg_order_id>
+                        <pg_payment_id>765432</pg_payment_id>
+                        <pg_payment_system>WEBMONEYR</pg_payment_system>
+                        <pg_amount>100.00</pg_amount>
+                        <pg_net_amount>95.00</pg_net_amount>
+                        <pg_currency>RUR</pg_currency>
+                        <pg_ps_currency>RUR</pg_ps_currency>
+                        <pg_ps_amount>100.00</pg_ps_amount>
+                        <pg_ps_full_amount>100.00</pg_ps_full_amount>
+                        <pg_result>%s</pg_result>
+                        <pg_can_reject>0</pg_can_reject>
+                        <pg_payment_date>2008-12-30 23:59:30</pg_payment_date>
+                        <pg_card_brand>CA</pg_card_brand>
+                        <uservar1>45363456</uservar1>
+                        <pg_sig>%s</pg_sig>
+                    </request>
+                    """
+
+    def setUp(self):
+        self.client = Client()
+
+    @mock.patch("urllib2.urlopen", platron_fake_success_init_payment)
+    def test_success_init_payment(self):
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='123.45', currency='RUR')
+        order.save()
+        payment = Payment(pk=99, order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
+        payment.save(force_insert=True)
+        payment = Payment.objects.get(pk=99)
+        processor = getpaid.backends.platron.PaymentProcessor(payment)
+
+        fake_request = RequestFactory()
+        ip = {'REMOTE_ADDR': '123.123.123.123'}
+        setattr(fake_request, 'META', ip)
+        url = processor.get_gateway_url(fake_request, 'WEBMONEYR')
+
+        self.assertEqual(url, 'https://www.platron.ru/payment_params.php?customer=ccaa41a4f425d124a23c3a53a3140bdc15826')
+
+    @mock.patch("urllib2.urlopen", platron_fake_fail_init_payment)
+    def test_fail_init_payment(self):
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='123.45', currency='RUR')
+        order.save()
+        payment = Payment(pk=99, order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
+        payment.save(force_insert=True)
+        payment = Payment.objects.get(pk=99)
+        processor = getpaid.backends.platron.PaymentProcessor(payment)
+
+        fake_request = RequestFactory()
+        ip = {'REMOTE_ADDR': '123.123.123.123'}
+        setattr(fake_request, 'META', ip)
+        url = processor.get_gateway_url(fake_request, 'WEBMONEYR')
+
+        self.assertEqual(url, '/getpaid.backends.platron/failure/99/?pg_error_code=101&pg_error_description=Empty+merchant')
+
+    def test_online_wrong_sig(self):
+        self.assertEqual('SIG ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'xxxx'), 'check.php'))
+        self.assertNotEqual('SIG ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'd63da16a216d036eb4e1946688dc8f90'), 'check.php'))
+
+    def test_online_wrong_currency(self):
+        self.assertEqual('CUR ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'EUR', 'd8499a3d89667f172f0f813529f2b398'), 'check.php'))
+        self.assertNotEqual('CUR ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'd63da16a216d036eb4e1946688dc8f90'), 'check.php'))
+
+    def test_online_crc_error(self):
+        # TODO
+        self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1111', 'RUR', '14a7728cbdc3abde94cca583e5f7e9f4'), 'check.php'))
+        self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'd63da16a216d036eb4e1946688dc8f90'), 'check.php'))
+
+    def test_online_malformed(self):
+        response = self.client.post(reverse('getpaid-platron-check'), {})
+        self.assertEqual(response.content, 'MALFORMED')
+
+    def test_send_response(self):
+        check_url = reverse('getpaid-platron-check')
+        result_url = reverse('getpaid-platron-result')
+
+        response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1234', 'RUR', 'xxxx')})
+        self.assertContains(response, '<pg_status>error</pg_status>')
+        response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1234', 'EUR', 'd63da16a216d036eb4e1946688dc8f90')})
+        self.assertContains(response, '<pg_status>error</pg_status>')
+        response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1111', 'RUR', 'd63da16a216d036eb4e1946688dc8f90')})
+        self.assertContains(response, '<pg_status>error</pg_status>')
+
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='100.00', currency='RUR')
+        order.save()
+        payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
+        payment.save(force_insert=True)
+        response = self.client.post(result_url, {'pg_xml': self.xml_result % (payment.pk, '1', 'e668147fe238a3053d7aa1328749d31d')})
+        self.assertContains(response, '<pg_status>ok</pg_status>')
+
+    def test_online_payment_ok(self):
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='100.00', currency='RUR')
+        order.save()
+        payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
+        payment.save(force_insert=True)
+        self.assertEqual('OK', getpaid.backends.platron.PaymentProcessor.online(self.xml_result % (payment.pk, '1', 'e668147fe238a3053d7aa1328749d31d'), 'result.php'))
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual(payment.status, 'paid')
+        self.assertNotEqual(payment.paid_on, None)
+        self.assertEqual(payment.amount_paid, Decimal('100.00'))
+
+        # repeat
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual('OK', getpaid.backends.platron.PaymentProcessor.online(self.xml_result % (payment.pk, '1', 'e668147fe238a3053d7aa1328749d31d'), 'result.php'))
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual(payment.status, 'paid')
+        self.assertNotEqual(payment.paid_on, None)
+        self.assertEqual(payment.amount_paid, Decimal('100.00'))
+
+    def test_online_payment_failure(self):
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='123.45', currency='RUR')
+        order.save()
+        payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
+        payment.save(force_insert=True)
+        self.assertEqual('OK', getpaid.backends.platron.PaymentProcessor.online(self.xml_result % (payment.pk, '0', '84c11ec90ac8a6f637e3adfa912bab60'), 'result.php'))
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual(payment.status, 'failed')
