@@ -43,6 +43,8 @@ class RequestTemplate:
             self.record = True
         else:
             self.end_tag = tag
+            if self.record:
+                self.xml[self.end_tag] = ''
 
     def end(self, tag):
         if tag == 'request':

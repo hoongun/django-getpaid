@@ -15,7 +15,7 @@ class OnlineView(View):
                         'CRC ERR': [u'Order id is not found'],
                         'REJECT': [u'Payment rejected', 'rejected'],
                         'OK': ['']}
-        return PaymentProcessor.send_response(*status_dict.get(status, ['']))
+        return PaymentProcessor.send_response(self.script_name, *status_dict.get(status, ['']))
 
     def post(self, request, *args, **kwargs):
         try:

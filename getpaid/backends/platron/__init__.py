@@ -28,11 +28,12 @@ class PaymentProcessor(PaymentProcessorBase):
 
     @staticmethod
     def compute_sig(script_name, pg, secret_key):
+        logger.debug('To compute: %s', pg)
         sig, keys = '', pg.keys()
         keys.sort()
         for key in keys:
-            if pg[key]:
-                sig += pg[key] + ';'
+            sig += pg[key] + ';'
+        logger.debug('SIGNATURE: %s', script_name + ';' + sig + secret_key)
         return hashlib.md5(script_name + ';' + sig + secret_key).hexdigest()
 
     @staticmethod
@@ -62,14 +63,14 @@ class PaymentProcessor(PaymentProcessorBase):
         return hashlib.md5(str(rnd(99, 999999))).hexdigest()
 
     @staticmethod
-    def send_response(description='', status='error'):
+    def send_response(script_name, description='', status='error'):
         key = PaymentProcessor.get_backend_setting('key')
         response = {
             'pg_salt': PaymentProcessor.generate_salt(),
             'pg_status': 'ok' if not description else status,
             'pg_description': description,
             'pg_error_description': description}
-        response['pg_sig'] = PaymentProcessor.compute_sig('', response, key)
+        response['pg_sig'] = PaymentProcessor.compute_sig(script_name, response, key)
         return PaymentProcessor.serialize(response, 'response')
 
     @staticmethod
@@ -162,8 +163,7 @@ class PaymentProcessor(PaymentProcessorBase):
 
               # 'ru' by default
               #'pg_language': '',
-              'pg_salt': str(PaymentProcessor.generate_salt()),
-              'pg_sig': ''}
+              'pg_salt': str(PaymentProcessor.generate_salt())}
         pg['pg_sig'] = PaymentProcessor.compute_sig('init_payment.php', pg, key)
 
         # Assembling XML-request
