@@ -8,7 +8,7 @@ import urllib
 import urllib2
 from xml.etree.ElementTree import XMLParser
 
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, resolve
 from django.db.models.loading import get_model
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
@@ -182,5 +182,7 @@ class PaymentProcessor(PaymentProcessorBase):
             params = {'pg_error_code': unicode(xml_dict['pg_error_code']).encode('utf-8'),
                       'pg_error_description': unicode(xml_dict['pg_error_description']).encode('utf-8'),
                       'pg_order_id': self.payment.pk}
-            return reverse('getpaid-platron-failure') + '?' + urllib.urlencode(params)
+            ns = resolve(request.path).namespace
+            ns = '%s:' % ns if ns else ''
+            return reverse('%sgetpaid-platron-failure' % ns) + '?' + urllib.urlencode(params)
         return xml_dict['pg_redirect_url']

@@ -387,6 +387,7 @@ class PlatronBackendTest(TestCase):
         fake_request = RequestFactory()
         ip = {'REMOTE_ADDR': '123.123.123.123'}
         setattr(fake_request, 'META', ip)
+        setattr(fake_request, 'path', '/getpaid.backends.platron/failure/')
         url = processor.get_gateway_url(fake_request, 'WEBMONEYR')
 
         self.assertEqual(url, '/getpaid.backends.platron/failure/?pg_error_code=101&pg_order_id=99&pg_error_description=Empty+merchant')

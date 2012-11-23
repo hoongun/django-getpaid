@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, resolve
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic.base import View
 from django.views.generic.detail import DetailView
@@ -43,7 +43,9 @@ class SuccessView(View):
 
     def get(self, request, *args, **kwargs):
         pk = request.GET.get('pg_order_id', None)
-        return HttpResponseRedirect(reverse('getpaid-success-fallback', kwargs={'pk': pk}))
+        ns = resolve(request.path).namespace
+        ns = '%s:' % ns if ns else ''
+        return HttpResponseRedirect(reverse('%sgetpaid-success-fallback' % ns, kwargs={'pk': pk}))
 
 
 class FailureView(View):
@@ -53,4 +55,6 @@ class FailureView(View):
 
     def get(self, request, *args, **kwargs):
         pk = request.GET.get('pg_order_id', None)
-        return HttpResponseRedirect(reverse('getpaid-failure-fallback', kwargs={'pk': pk}))
+        ns = resolve(request.path).namespace
+        ns = '%s:' % ns if ns else ''
+        return HttpResponseRedirect(reverse('%sgetpaid-failure-fallback' % ns, kwargs={'pk': pk}))
