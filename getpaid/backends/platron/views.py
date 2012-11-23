@@ -36,21 +36,21 @@ class ResultView(OnlineView):
     script_name = 'result'
 
 
-class SuccessView(DetailView):
+class SuccessView(View):
     """
     This view just redirects to standard backend success link.
     """
-    model = Payment
 
-    def render_to_response(self, context, **response_kwargs):
-        return HttpResponseRedirect(reverse('getpaid-success-fallback', kwargs={'pk': self.object.pk}))
+    def get(self, request, *args, **kwargs):
+        pk = request.GET.get('pg_order_id', None)
+        return HttpResponseRedirect(reverse('getpaid-success-fallback', kwargs={'pk': pk}))
 
 
-class FailureView(DetailView):
+class FailureView(View):
     """
     This view just redirects to standard backend failure link.
     """
-    model = Payment
 
-    def render_to_response(self, context, **response_kwargs):
-        return HttpResponseRedirect(reverse('getpaid-failure-fallback', kwargs={'pk': self.object.pk}))
+    def get(self, request, *args, **kwargs):
+        pk = request.GET.get('pg_order_id', None)
+        return HttpResponseRedirect(reverse('getpaid-failure-fallback', kwargs={'pk': pk}))

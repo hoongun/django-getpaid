@@ -389,7 +389,7 @@ class PlatronBackendTest(TestCase):
         setattr(fake_request, 'META', ip)
         url = processor.get_gateway_url(fake_request, 'WEBMONEYR')
 
-        self.assertEqual(url, '/getpaid.backends.platron/failure/99/?pg_error_code=101&pg_error_description=Empty+merchant')
+        self.assertEqual(url, '/getpaid.backends.platron/failure/?pg_error_code=101&pg_order_id=99&pg_error_description=Empty+merchant')
 
     def test_online_wrong_sig(self):
         self.assertEqual('SIG ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'xxxx'), 'check'))

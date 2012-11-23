@@ -180,6 +180,7 @@ class PaymentProcessor(PaymentProcessorBase):
         if xml_dict['pg_status'] == 'error':
             logging.error('Payment request failed: %s', xml_req)
             params = {'pg_error_code': unicode(xml_dict['pg_error_code']).encode('utf-8'),
-                      'pg_error_description': unicode(xml_dict['pg_error_description']).encode('utf-8')}
-            return reverse('getpaid-platron-failure', kwargs={'pk': self.payment.pk}) + '?' + urllib.urlencode(params)
+                      'pg_error_description': unicode(xml_dict['pg_error_description']).encode('utf-8'),
+                      'pg_order_id': self.payment.pk}
+            return reverse('getpaid-platron-failure') + '?' + urllib.urlencode(params)
         return xml_dict['pg_redirect_url']
