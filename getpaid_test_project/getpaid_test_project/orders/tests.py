@@ -405,6 +405,9 @@ class PlatronBackendTest(TestCase):
         self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1111', 'RUR', 'e2947c340f12b8878fd86decdf09df37'), 'check'))
         self.assertEqual('CRC ERR', getpaid.backends.platron.PaymentProcessor.online(self.xml_check % ('1234', 'RUR', 'ed57bad3c1b30649033bb7b3e3d33b86'), 'check'))
 
+    def test_online_rejected(self):
+        pass
+
     def test_online_malformed(self):
         response = self.client.post(reverse('getpaid-platron-check'), {})
         self.assertEqual(response.content, 'MALFORMED')
@@ -460,3 +463,9 @@ class PlatronBackendTest(TestCase):
         self.assertEqual('OK', getpaid.backends.platron.PaymentProcessor.online(self.xml_result % (payment.pk, '0', '84c11ec90ac8a6f637e3adfa912bab60'), 'result.php'))
         payment = Payment.objects.get(pk=payment.pk)
         self.assertEqual(payment.status, 'failed')
+
+    def test_success_fallback(self):
+        pass
+
+    def test_failure_fallback(self):
+        pass

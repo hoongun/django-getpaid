@@ -1,60 +1,49 @@
-class ResponseTemplate:
-    def __init__(self):
-        self.xml = {}
-        self.end_tag = ''
-        self.additional = False
-        self.additional_data = ''
+from xml.dom.minidom import parseString
 
-    def start(self, tag, attrib):
-        if tag != 'response':
-            if tag == 'pg_ps_additional_data':
-                self.additional = True
 
-            if self.additional:
-                self.additional_data += '<%s>' % tag
-            self.end_tag = tag
+class XMLParser(object):
+    def __init__(self, max_depth=2):
+        self.max_depth = max_depth
+        self.depth = 0
 
-    def end(self, tag):
-        if tag != 'response':
-            self.end_tag = ''
-        if self.additional:
-            self.additional_data += '</%s>' % tag
+    def parse(self, xml_node):
+        d = {}
+        self.depth += 1
+        for node in xml_node.childNodes:
+            if node.nodeType != node.TEXT_NODE:
+                d[node.tagName] = ''
+                if node.childNodes:
+                    textnode = node.childNodes[0]
+                    if textnode.nodeType == node.TEXT_NODE and len(node.childNodes) == 1:
+                        d[node.tagName] = textnode.nodeValue
+                    elif self.depth <= self.max_depth:
+                        d[node.tagName] = self.parse(node)
+                    else:
+                        print textnode
+        self.depth -= 1
+        return d
 
-    def data(self, data):
-        if self.additional:
-            self.additional_data += data
+    @classmethod
+    def to_dict(cls, xml, max_depth=2):
+        parser = cls(max_depth)
+
+        xml = parseString(xml)
+        request = xml.getElementsByTagName('request')
+        response = xml.getElementsByTagName('response')
+
+        if response:
+            return parser.parse(response[0])
+        elif request:
+            return parser.parse(request[0])
         else:
-            self.xml[self.end_tag] = data
+            return {}
 
-    def close(self):
-        if self.additional_data:
-            self.xml['pg_ps_additional_data'] = self.additional_data
-        return self.xml
+    @staticmethod
+    def to_xml(elements, type='request'):
+        params = ''
+        for key, value in elements.items():
+            params += '  <%(key)s>%(value)s</%(key)s>\n' % {'key': key, 'value': value}
 
-
-class RequestTemplate:
-    def __init__(self):
-        self.xml = {}
-        self.record = False
-        self.end_tag = ''
-
-    def start(self, tag, attrib):
-        if tag == 'request':
-            self.record = True
-        else:
-            self.end_tag = tag
-            if self.record:
-                self.xml[self.end_tag] = ''
-
-    def end(self, tag):
-        if tag == 'request':
-            self.record = False
-        else:
-            self.end_tag = ''
-
-    def data(self, data):
-        if self.record and self.end_tag:
-            self.xml[self.end_tag] = data
-
-    def close(self):
-        return self.xml
+        xml = '<?xml version="1.0" encoding="utf-8"?>'\
+                '<%(type)s>\n%(params)s</%(type)s>' % {'type': type, 'params': params}
+        return xml

@@ -6,15 +6,16 @@ import logging
 from random import randint as rnd
 import urllib
 import urllib2
-from xml.etree.ElementTree import XMLParser
 
 from django.core.urlresolvers import reverse, resolve
 from django.db.models.loading import get_model
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
+from getpaid import signals
 from getpaid.backends import PaymentProcessorBase
 
-from xml_parsing import RequestTemplate, ResponseTemplate
+from xml_parsing import XMLParser
+
 
 logger = logging.getLogger('getpaid.backends.platron')
 
@@ -27,36 +28,33 @@ class PaymentProcessor(PaymentProcessorBase):
     _INIT_PAYMENT_URL = 'https://www.platron.ru/init_payment.php'
 
     @staticmethod
+    def _get_order(dic):
+        flat = {}
+
+        order = dic.keys()
+        order.sort()
+
+        for k, v in dic.items():
+            if isinstance(dic[k], dict):
+                deep_flat, deep_order = PaymentProcessor._get_order(v)
+                flat.update(deep_flat)
+
+                i = order.index(k)
+                del order[i]
+                order = order[:i] + deep_order + order[i:]
+            else:
+                flat[k] = v
+        return flat, order
+
+    @staticmethod
     def compute_sig(script_name, pg, secret_key):
         logger.debug('To compute: %s', pg)
-        sig, keys = '', pg.keys()
-        keys.sort()
-        for key in keys:
-            sig += pg[key] + ';'
+        sig = ''
+        flat_pg, order = PaymentProcessor._get_order(pg)
+        for key in order:
+            sig += flat_pg[key] + ';'
         logger.debug('SIGNATURE: %s', script_name + ';' + sig + secret_key)
         return hashlib.md5(script_name + ';' + sig + secret_key).hexdigest()
-
-    @staticmethod
-    def serialize(elements, type='request'):
-        params = ''
-        for key, value in elements.items():
-            params += '  <%(key)s>%(value)s</%(key)s>\n' % {'key': key, 'value': value}
-
-        xml = '<?xml version="1.0" encoding="utf-8"?>'\
-                '<%(type)s>\n%(params)s</%(type)s>' % {'type': type, 'params': params}
-        return xml
-
-    @staticmethod
-    def deserialize(xml):
-        if xml.find('<response>') >= 0:
-            target = ResponseTemplate()
-        elif xml.find('<request>') >= 0:
-            target = RequestTemplate()
-        else:
-            return {}
-        parser = XMLParser(target=target)
-        parser.feed(xml)
-        return parser.close()
 
     @staticmethod
     def generate_salt():
@@ -71,13 +69,13 @@ class PaymentProcessor(PaymentProcessorBase):
             'pg_description': description,
             'pg_error_description': description}
         response['pg_sig'] = PaymentProcessor.compute_sig(script_name, response, key)
-        return PaymentProcessor.serialize(response, 'response')
+        return XMLParser.to_xml(response, 'response')
 
     @staticmethod
     def online(xml, script_name):
         key = PaymentProcessor.get_backend_setting('key')
         currency = PaymentProcessor.get_backend_setting('currency')
-        pg = PaymentProcessor.deserialize(xml)
+        pg = XMLParser.to_dict(xml)
 
         # check signature
         if 'pg_sig' not in pg:
@@ -163,11 +161,22 @@ class PaymentProcessor(PaymentProcessorBase):
 
               # 'ru' by default
               #'pg_language': '',
-              'pg_salt': str(PaymentProcessor.generate_salt())}
+              'pg_salt': str(PaymentProcessor.generate_salt())
+        }
+
+        user_data = {
+              'pg_user_phone': '',
+              'pg_user_contact_email': '',
+              'pg_user_email': '',
+              'pg_user_cardholder': '',
+        }
+        signals.user_data_query.send(sender=None, order=self.payment.order, user_data=user_data)
+        pg.update(dict([(k, v) for k, v in user_data.items() if v != '']))
+
         pg['pg_sig'] = PaymentProcessor.compute_sig('init_payment.php', pg, key)
 
         # Assembling XML-request
-        xml_req = PaymentProcessor.serialize(pg)
+        xml_req = XMLParser.to_xml(pg)
 
         # Send payment request
         req = urllib2.Request(PaymentProcessor._INIT_PAYMENT_URL, data=xml_req)
@@ -175,7 +184,7 @@ class PaymentProcessor(PaymentProcessorBase):
         xml_resp = urllib2.urlopen(req).read()
 
         # Parsing answer
-        xml_dict = PaymentProcessor.deserialize(xml_resp)
+        xml_dict = XMLParser.to_dict(xml_resp)
 
         if xml_dict['pg_status'] == 'error':
             logging.error('Payment request failed: %s', xml_req)
