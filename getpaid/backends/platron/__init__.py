@@ -165,13 +165,14 @@ class PaymentProcessor(PaymentProcessorBase):
         }
 
         user_data = {
-              'pg_user_phone': '',
-              'pg_user_contact_email': '',
-              'pg_user_email': '',
-              'pg_user_cardholder': '',
+              'email': '',
+              'phone': '',
         }
         signals.user_data_query.send(sender=None, order=self.payment.order, user_data=user_data)
-        pg.update(dict([(k, v) for k, v in user_data.items() if v != '']))
+        if 'email' in user_data:
+            pg['pg_user_email'] = user_data['email']
+        if 'phone' in user_data:
+            pg['pg_user_phone'] = user_data['phone']
 
         pg['pg_sig'] = PaymentProcessor.compute_sig('init_payment.php', pg, key)
 
