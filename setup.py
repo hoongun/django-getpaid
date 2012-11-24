@@ -7,7 +7,7 @@ setup(
     name='django-getpaid',
     description='Multi-broker payment processor for django',
     long_description=long_description,
-    version='1.2.0',
+    version='1.3.0dev',
     packages=find_packages(),
     url='https://github.com/cypreess/django-getpaid',
     license='MIT',
@@ -20,5 +20,25 @@ setup(
         ],
     },
 
-    package_data={'getpaid.backends.dummy': ['templates/getpaid_dummy_backend/*.html', ]},
+    package_data={
+        'getpaid': [
+            'templates/getpaid/*.html',
+        ],
+        'getpaid.backends.dummy': [
+            'templates/getpaid_dummy_backend/*.html',
+        ],
+
+        'getpaid.backends.dotpay': [
+            'static/getpaid/backends/dotpay/*',
+        ],
+
+        'getpaid.backends.payu': [
+            'static/getpaid/backends/payu/*',
+        ],
+
+        'getpaid.backends.transferuj': [
+            'static/getpaid/backends/transferuj/*',
+        ],
+
+    },
 )

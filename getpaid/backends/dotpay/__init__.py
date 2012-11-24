@@ -4,6 +4,7 @@ import hashlib
 import logging
 import urllib
 from django.contrib.sites.models import Site
+from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import reverse
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
@@ -25,6 +26,7 @@ class PaymentProcessor(PaymentProcessorBase):
     BACKEND = 'getpaid.backends.dotpay'
     BACKEND_NAME = _('Dotpay')
     BACKEND_ACCEPTED_CURRENCY = ('PLN', 'EUR', 'USD', 'GBP', 'JPY', 'CZK', 'SEK' )
+    BACKEND_LOGO_URL = 'getpaid/backends/dotpay/dotpay_logo.png'
 
     _ALLOWED_IP = ('195.150.9.37', )
     _ACCEPTED_LANGS = ('pl', 'en', 'de', 'it', 'fr', 'es', 'cz', 'ru', 'bg')
@@ -142,8 +144,12 @@ class PaymentProcessor(PaymentProcessorBase):
         if PaymentProcessor.get_backend_setting('tax', False):
             params['tax'] = 1
 
-        for key in params.keys():
-            params[key] = unicode(params[key]).encode('utf-8')
 
-        gateway_url = self._GATEWAY_URL + '?' + urllib.urlencode(params)
-        return gateway_url
+        if PaymentProcessor.get_backend_setting('method', 'get').lower() == 'post':
+            return self._GATEWAY_URL , 'POST', params
+        elif PaymentProcessor.get_backend_setting('method', 'get').lower() == 'get':
+            for key in params.keys():
+                params[key] = unicode(params[key]).encode('utf-8')
+            return self._GATEWAY_URL + '?' + urllib.urlencode(params), "GET", {}
+        else:
+            raise ImproperlyConfigured('Dotpay payment backend accepts only GET or POST')
