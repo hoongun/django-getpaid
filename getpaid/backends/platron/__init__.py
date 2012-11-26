@@ -7,6 +7,7 @@ from random import randint as rnd
 import urllib
 import urllib2
 
+from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import reverse, resolve
 from django.db.models.loading import get_model
 from django.utils.timezone import utc
@@ -187,12 +188,21 @@ class PaymentProcessor(PaymentProcessorBase):
         # Parsing answer
         xml_dict = XMLParser.to_dict(xml_resp)
 
+        gateway_url, params = '', {}
         if xml_dict['pg_status'] == 'error':
             logging.error('Payment request failed: %s', xml_req)
-            params = {'pg_error_code': unicode(xml_dict['pg_error_code']).encode('utf-8'),
-                      'pg_error_description': unicode(xml_dict['pg_error_description']).encode('utf-8'),
+            params = {'pg_error_code': xml_dict['pg_error_code'],
+                      'pg_error_description': xml_dict['pg_error_description'],
                       'pg_order_id': self.payment.pk}
             ns = resolve(request.path).namespace
             ns = '%s:' % ns if ns else ''
-            return reverse('%sgetpaid-platron-failure' % ns) + '?' + urllib.urlencode(params)
-        return xml_dict['pg_redirect_url']
+            gateway_url = reverse('%sgetpaid-platron-failure' % ns)
+        else:
+            gateway_url = xml_dict['pg_redirect_url']
+
+        if PaymentProcessor.get_backend_setting('method', 'get').lower() == 'get':
+            for key in params.keys():
+                params[key] = unicode(params[key]).encode('utf-8')
+            return gateway_url + '?' + urllib.urlencode(params), 'GET', {}
+        else:
+            raise ImproperlyConfigured('Platron payment backend accepts only GET')

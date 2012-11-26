@@ -370,9 +370,9 @@ class PlatronBackendTest(TestCase):
         fake_request = RequestFactory()
         ip = {'REMOTE_ADDR': '123.123.123.123'}
         setattr(fake_request, 'META', ip)
-        url = processor.get_gateway_url(fake_request, 'WEBMONEYR')
+        url, method, params = processor.get_gateway_url(fake_request, 'WEBMONEYR')
 
-        self.assertEqual(url, 'https://www.platron.ru/payment_params.php?customer=ccaa41a4f425d124a23c3a53a3140bdc15826')
+        self.assertEqual(url, 'https://www.platron.ru/payment_params.php?customer=ccaa41a4f425d124a23c3a53a3140bdc15826?')
 
     @mock.patch("urllib2.urlopen", platron_fake_fail_init_payment)
     def test_fail_init_payment(self):
@@ -388,7 +388,7 @@ class PlatronBackendTest(TestCase):
         ip = {'REMOTE_ADDR': '123.123.123.123'}
         setattr(fake_request, 'META', ip)
         setattr(fake_request, 'path', '/getpaid.backends.platron/failure/')
-        url = processor.get_gateway_url(fake_request, 'WEBMONEYR')
+        url, method, params = processor.get_gateway_url(fake_request, 'WEBMONEYR')
 
         self.assertEqual(url, '/getpaid.backends.platron/failure/?pg_error_code=101&pg_order_id=99&pg_error_description=Empty+merchant')
 
