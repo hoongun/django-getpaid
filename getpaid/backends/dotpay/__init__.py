@@ -88,7 +88,7 @@ class PaymentProcessor(PaymentProcessorBase):
         return 'OK'
 
     def get_URLC(self):
-        urlc = reverse('getpaid-dotpay-online')
+        urlc = reverse('getpaid:dotpay:online')
         current_site = Site.objects.get_current()
         if PaymentProcessor.get_backend_setting('force_ssl', False):
             return 'https://%s%s' % (current_site.domain, urlc)
@@ -97,7 +97,7 @@ class PaymentProcessor(PaymentProcessorBase):
 
     def get_URL(self, pk):
         current_site = Site.objects.get_current()
-        url = reverse('getpaid-dotpay-return', kwargs={'pk' : pk})
+        url = reverse('getpaid:dotpay:return', kwargs={'pk' : pk})
         if PaymentProcessor.get_backend_setting('force_ssl', False):
             return 'https://%s%s' % (current_site.domain, url)
         else:

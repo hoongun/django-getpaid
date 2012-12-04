@@ -170,9 +170,9 @@ class PaymentProcessor(PaymentProcessorBase):
               'phone': '',
         }
         signals.user_data_query.send(sender=None, order=self.payment.order, user_data=user_data)
-        if 'email' in user_data:
+        if user_data['email']:
             pg['pg_user_email'] = user_data['email']
-        if 'phone' in user_data:
+        if user_data['phone']:
             pg['pg_user_phone'] = user_data['phone']
 
         pg['pg_sig'] = PaymentProcessor.compute_sig('init_payment.php', pg, key)
@@ -194,9 +194,7 @@ class PaymentProcessor(PaymentProcessorBase):
             params = {'pg_error_code': xml_dict['pg_error_code'],
                       'pg_error_description': xml_dict['pg_error_description'],
                       'pg_order_id': self.payment.pk}
-            ns = resolve(request.path).namespace
-            ns = '%s:' % ns if ns else ''
-            gateway_url = reverse('%sgetpaid-platron-failure' % ns)
+            gateway_url = reverse('getpaid:platron:failure')
         else:
             gateway_url = xml_dict['pg_redirect_url']
 

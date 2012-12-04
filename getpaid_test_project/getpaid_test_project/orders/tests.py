@@ -28,7 +28,7 @@ class OrderTest(TestCase):
         """
         order = Order(name='Test EUR order', total=100, currency='EUR')
         order.save()
-        response = self.client.post(reverse('getpaid-new-payment', kwargs={'currency' : 'EUR'}),
+        response = self.client.post(reverse('getpaid:new-payment', kwargs={'currency' : 'EUR'}),
                     {'order': order.pk,
                      'backend': 'getpaid.backends.dummy'}
         )
@@ -48,7 +48,7 @@ class OrderTest(TestCase):
         """
         order = Order(name='Test PLN order', total=100, currency='PLN')
         order.save()
-        response = self.client.post(reverse('getpaid-new-payment', kwargs={'currency' : 'PLN'}),
+        response = self.client.post(reverse('getpaid:new-payment', kwargs={'currency' : 'PLN'}),
                 {'order': order.pk,
                  'backend': 'getpaid.backends.payu'}
         )
@@ -70,7 +70,7 @@ class OrderTest(TestCase):
         """
         order = Order(name='Test EUR order', total=100, currency='EUR')
         order.save()
-        response = self.client.post(reverse('getpaid-new-payment', kwargs={'currency' : 'EUR'}),
+        response = self.client.post(reverse('getpaid:new-payment', kwargs={'currency' : 'EUR'}),
                     {'order': order.pk,
                      'backend': 'getpaid.backends.payu'}
         )
@@ -139,11 +139,11 @@ class PayUBackendTest(TestCase):
         self.client = Client()
 
     def test_online_malformed(self):
-        response = self.client.post(reverse('getpaid-payu-online'), {})
+        response = self.client.post(reverse('getpaid:payu:online'), {})
         self.assertEqual(response.content, 'MALFORMED')
 
     def test_online_sig_err(self):
-        response = self.client.post(reverse('getpaid-payu-online'), {
+        response = self.client.post(reverse('getpaid:payu:online'), {
             'pos_id' : 'wrong',
             'session_id': '10:11111',
             'ts' : '1111',
@@ -152,7 +152,7 @@ class PayUBackendTest(TestCase):
         self.assertEqual(response.content, 'SIG ERR')
 
     def test_online_wrong_pos_id_err(self):
-        response = self.client.post(reverse('getpaid-payu-online'), {
+        response = self.client.post(reverse('getpaid:payu:online'), {
             'pos_id' : '12345',
             'session_id': '10:11111',
             'ts' : '1111',
@@ -161,7 +161,7 @@ class PayUBackendTest(TestCase):
         self.assertEqual(response.content, 'POS_ID ERR')
 
     def test_online_wrong_session_id_err(self):
-        response = self.client.post(reverse('getpaid-payu-online'), {
+        response = self.client.post(reverse('getpaid:payu:online'), {
             'pos_id' : '123456789',
             'session_id': '111111',
             'ts' : '1111',
@@ -170,7 +170,7 @@ class PayUBackendTest(TestCase):
         self.assertEqual(response.content, 'SESSION_ID ERR')
 
     def test_online_ok(self):
-        response = self.client.post(reverse('getpaid-payu-online'), {
+        response = self.client.post(reverse('getpaid:payu:online'), {
             'pos_id' : '123456789',
             'session_id': '1:11111',
             'ts' : '1111',
@@ -409,12 +409,12 @@ class PlatronBackendTest(TestCase):
         pass
 
     def test_online_malformed(self):
-        response = self.client.post(reverse('getpaid-platron-check'), {})
+        response = self.client.post(reverse('getpaid:platron:check'), {})
         self.assertEqual(response.content, 'MALFORMED')
 
     def test_send_response(self):
-        check_url = reverse('getpaid-platron-check')
-        result_url = reverse('getpaid-platron-result')
+        check_url = reverse('getpaid:platron:check')
+        result_url = reverse('getpaid:platron:result')
 
         response = self.client.post(check_url, {'pg_xml': self.xml_check % ('1234', 'RUR', 'xxxx')})
         self.assertContains(response, '<pg_status>error</pg_status>')

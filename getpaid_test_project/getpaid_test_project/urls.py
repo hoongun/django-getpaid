@@ -9,7 +9,7 @@ urlpatterns = patterns('getpaid_test_project',
     url(r'^order/(?P<pk>\d+)/$', OrderView.as_view(), name='order_detail'),
 
 
-    url(r'', include('getpaid.urls')),
+    url(r'^', include('getpaid.urls', namespace='getpaid')),
 
     (r'^admin/', include(admin.site.urls)),
 )

@@ -13,9 +13,9 @@ class Command(BaseCommand):
         self.stdout.write('Login to PayU configuration page and setup following links:\n\n')
         self.stdout.write(' * Success URL: http://%s%s\n                https://%s%s\n\n' % (
             current_site.domain,
-            reverse('getpaid-payu-success', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
+            reverse('getpaid:payu:success', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
             current_site.domain,
-            reverse('getpaid-payu-success', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
+            reverse('getpaid:payu:success', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
 
             )
         )
@@ -24,9 +24,9 @@ class Command(BaseCommand):
 
         self.stdout.write(' * Failure URL: http://%s%s\n                https://%s%s\n\n' % (
             current_site.domain,
-            reverse('getpaid-payu-failure', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
+            reverse('getpaid:payu:failure', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
             current_site.domain,
-            reverse('getpaid-payu-failure', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
+            reverse('getpaid:payu:failure', kwargs={'pk': 1234}).replace('1234', '%orderId%'),
             )
 
         )
@@ -35,9 +35,9 @@ class Command(BaseCommand):
 
         self.stdout.write(' * Online  URL: http://%s%s\n                https://%s%s\n\n' % (
             current_site.domain,
-            reverse('getpaid-payu-online'),
+            reverse('getpaid:payu:online'),
             current_site.domain,
-            reverse('getpaid-payu-online'),
+            reverse('getpaid:payu:online'),
             )
         )
 

@@ -116,16 +116,16 @@ class PaymentProcessor(PaymentProcessorBase):
         current_site = Site.objects.get_current()
 
         if PaymentProcessor.get_backend_setting('force_ssl_online', False):
-            params['wyn_url'] = 'https://' + current_site.domain + reverse('getpaid-transferuj-online')
+            params['wyn_url'] = 'https://' + current_site.domain + reverse('getpaid:transferuj:online')
         else:
-            params['wyn_url'] = 'http://' + current_site.domain + reverse('getpaid-transferuj-online')
+            params['wyn_url'] = 'http://' + current_site.domain + reverse('getpaid:transferuj:online')
 
         if PaymentProcessor.get_backend_setting('force_ssl_return', False):
-            params['pow_url'] = 'https://' + current_site.domain + reverse('getpaid-transferuj-success', kwargs={'pk': self.payment.pk})
-            params['pow_url_blad'] = 'https://' + current_site.domain + reverse('getpaid-transferuj-failure', kwargs={'pk': self.payment.pk})
+            params['pow_url'] = 'https://' + current_site.domain + reverse('getpaid:transferuj:success', kwargs={'pk': self.payment.pk})
+            params['pow_url_blad'] = 'https://' + current_site.domain + reverse('getpaid:transferuj:failure', kwargs={'pk': self.payment.pk})
         else:
-            params['pow_url'] = 'http://' + current_site.domain + reverse('getpaid-transferuj-success', kwargs={'pk': self.payment.pk})
-            params['pow_url_blad'] = 'http://' + current_site.domain + reverse('getpaid-transferuj-failure', kwargs={'pk': self.payment.pk})
+            params['pow_url'] = 'http://' + current_site.domain + reverse('getpaid:transferuj:success', kwargs={'pk': self.payment.pk})
+            params['pow_url_blad'] = 'http://' + current_site.domain + reverse('getpaid:transferuj:failure', kwargs={'pk': self.payment.pk})
 
 
         if PaymentProcessor.get_backend_setting('method', 'get').lower() == 'post':
