@@ -8,7 +8,7 @@ import urllib
 import urllib2
 
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import reverse, resolve
+from django.core.urlresolvers import reverse
 from django.db.models.loading import get_model
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
@@ -24,9 +24,19 @@ logger = logging.getLogger('getpaid.backends.platron')
 class PaymentProcessor(PaymentProcessorBase):
     BACKEND = 'getpaid.backends.platron'
     BACKEND_NAME = _('Platron')
-    BACKEND_ACCEPTED_CURRENCY = ('RUR', )
+    BACKEND_ACCEPTED_CURRENCY = ('RUB', )
 
     _INIT_PAYMENT_URL = 'https://www.platron.ru/init_payment.php'
+    _ADDITION_DATA = [
+        'pg_payment_system',
+        'pg_encoding',
+        'pg_description',
+        'pg_user_phone',
+        'pg_user_contact_email',
+        'pg_user_email',
+        'pg_user_cardholder',
+        'pg_language',
+    ]
 
     @staticmethod
     def _get_order(dic):
@@ -87,6 +97,10 @@ class PaymentProcessor(PaymentProcessorBase):
             if sig != PaymentProcessor.compute_sig(script_name, pg, key):
                 return 'SIG ERR'
 
+        # Special for Platron
+        if currency == 'RUB':
+            currency = 'RUR'
+
         # check currency
         if currency != pg['pg_ps_currency']:
             return 'CUR ERR'
@@ -119,11 +133,15 @@ class PaymentProcessor(PaymentProcessorBase):
             pass
         return 'OK'
 
-    def get_gateway_url(self, request, payment_system_name=''):
+    def get_gateway_url(self, request):
         id = PaymentProcessor.get_backend_setting('id')
         key = PaymentProcessor.get_backend_setting('key')
         currency = PaymentProcessor.get_backend_setting('currency')
         testing = PaymentProcessor.get_backend_setting('testing')
+
+        # Special for Platron
+        if currency == 'RUB':
+            currency = 'RUR'
 
         pg = {'pg_merchant_id': id,
               'pg_order_id': str(self.payment.pk),
@@ -140,7 +158,7 @@ class PaymentProcessor(PaymentProcessorBase):
               #'pg_success_url_method': '',
               #'pg_failure_url_method': '',
 
-              'pg_payment_system': 'TEST' if bool(testing) else payment_system_name,
+              'pg_payment_system': 'TEST',
 
               # One day by default
               #'pg_lifetime': '',
@@ -166,14 +184,24 @@ class PaymentProcessor(PaymentProcessorBase):
         }
 
         user_data = {
-              'email': '',
-              'phone': '',
+              'email': None,
+              'phone': None,
+              'lang': None,
         }
+
         signals.user_data_query.send(sender=None, order=self.payment.order, user_data=user_data)
         if user_data['email']:
-            pg['pg_user_email'] = user_data['email']
+            user_data['pg_user_email'] = user_data['email']
         if user_data['phone']:
-            pg['pg_user_phone'] = user_data['phone']
+            user_data['pg_user_phone'] = user_data['phone']
+        if user_data['lang']:
+            user_data['pg_language'] = user_data['lang']
+        del user_data['email']
+        del user_data['phone']
+        del user_data['lang']
+        if bool(testing):
+            del user_data['pg_payment_system']
+        pg.update([(k, v) for k, v in user_data.items() if k in self.ADDITION_DATA])
 
         pg['pg_sig'] = PaymentProcessor.compute_sig('init_payment.php', pg, key)
 
