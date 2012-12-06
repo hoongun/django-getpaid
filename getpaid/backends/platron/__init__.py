@@ -63,7 +63,7 @@ class PaymentProcessor(PaymentProcessorBase):
         sig = ''
         flat_pg, order = PaymentProcessor._get_order(pg)
         for key in order:
-            sig += flat_pg[key] + ';'
+            sig += unicode(flat_pg[key]).encode('utf-8') + ';'
         logger.debug('SIGNATURE: %s', script_name + ';' + sig + secret_key)
         return hashlib.md5(script_name + ';' + sig + secret_key).hexdigest()
 
@@ -201,7 +201,7 @@ class PaymentProcessor(PaymentProcessorBase):
         del user_data['lang']
         if bool(testing):
             del user_data['pg_payment_system']
-        pg.update([(k, v) for k, v in user_data.items() if k in self.ADDITION_DATA])
+        pg.update([(k, v) for k, v in user_data.items() if k in self._ADDITION_DATA])
 
         pg['pg_sig'] = PaymentProcessor.compute_sig('init_payment.php', pg, key)
 
@@ -229,6 +229,7 @@ class PaymentProcessor(PaymentProcessorBase):
         if PaymentProcessor.get_backend_setting('method', 'get').lower() == 'get':
             for key in params.keys():
                 params[key] = unicode(params[key]).encode('utf-8')
-            return gateway_url + '?' + urllib.urlencode(params), 'GET', {}
+            gateway_url += '' if gateway_url.find('?') > 0 else '?'
+            return gateway_url + urllib.urlencode(params), 'GET', {}
         else:
             raise ImproperlyConfigured('Platron payment backend accepts only GET')

@@ -46,4 +46,4 @@ class XMLParser(object):
 
         xml = '<?xml version="1.0" encoding="utf-8"?>'\
                 '<%(type)s>\n%(params)s</%(type)s>' % {'type': type, 'params': params}
-        return xml
+        return unicode(xml).encode('utf-8')
