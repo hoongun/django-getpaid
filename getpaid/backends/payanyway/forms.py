@@ -3,6 +3,7 @@ from django import forms
 
 
 ADDITION_FIELDS = [
+    'MNT_DESCRIPTION',
     'MNT_CUSTOM1',
     'MNT_CUSTOM2',
     'MNT_CUSTOM3',
@@ -20,7 +21,7 @@ class PayForm(forms.Form):
     MNT_TEST_MODE = forms.CharField(widget=forms.HiddenInput)
     MNT_TRANSACTION_ID = forms.CharField(widget=forms.HiddenInput)
     MNT_AMOUNT = forms.CharField(required=False, widget=forms.HiddenInput)
-    MNT_DESCRIPTION = forms.CharField(required=False, widget=forms.HiddenInput)
+
     MNT_SIGNATURE = forms.CharField(widget=forms.HiddenInput)
 
     # Form and field validation
@@ -33,3 +34,4 @@ class PayForm(forms.Form):
         for k, v in addition_data.items():
             if v is not None:
                 self.fields[k] = forms.CharField(widget=forms.HiddenInput(), initial=v)
+                self.data[k] = v
