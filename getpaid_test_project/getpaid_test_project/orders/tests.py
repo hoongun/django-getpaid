@@ -360,7 +360,7 @@ class PlatronBackendTest(TestCase):
     @mock.patch("urllib2.urlopen", platron_fake_success_init_payment)
     def test_success_init_payment(self):
         Payment = get_model('getpaid', 'Payment')
-        order = Order(name='Test EUR order', total='123.45', currency='RUR')
+        order = Order(name='Test EUR order', total='123.45', currency='RUB')
         order.save()
         payment = Payment(pk=99, order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
         payment.save(force_insert=True)
@@ -370,14 +370,14 @@ class PlatronBackendTest(TestCase):
         fake_request = RequestFactory()
         ip = {'REMOTE_ADDR': '123.123.123.123'}
         setattr(fake_request, 'META', ip)
-        url, method, params = processor.get_gateway_url(fake_request, 'WEBMONEYR')
+        url, method, params = processor.get_gateway_url(fake_request)
 
-        self.assertEqual(url, 'https://www.platron.ru/payment_params.php?customer=ccaa41a4f425d124a23c3a53a3140bdc15826?')
+        self.assertEqual(url, 'https://www.platron.ru/payment_params.php?customer=ccaa41a4f425d124a23c3a53a3140bdc15826')
 
     @mock.patch("urllib2.urlopen", platron_fake_fail_init_payment)
     def test_fail_init_payment(self):
         Payment = get_model('getpaid', 'Payment')
-        order = Order(name='Test EUR order', total='123.45', currency='RUR')
+        order = Order(name='Test EUR order', total='123.45', currency='RUB')
         order.save()
         payment = Payment(pk=99, order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
         payment.save(force_insert=True)
@@ -388,7 +388,7 @@ class PlatronBackendTest(TestCase):
         ip = {'REMOTE_ADDR': '123.123.123.123'}
         setattr(fake_request, 'META', ip)
         setattr(fake_request, 'path', '/getpaid.backends.platron/failure/')
-        url, method, params = processor.get_gateway_url(fake_request, 'WEBMONEYR')
+        url, method, params = processor.get_gateway_url(fake_request)
 
         self.assertEqual(url, '/getpaid.backends.platron/failure/?pg_error_code=101&pg_order_id=99&pg_error_description=Empty+merchant')
 
@@ -427,7 +427,7 @@ class PlatronBackendTest(TestCase):
         #self.assertContains(response, '<pg_status>ok</pg_status>')
 
         Payment = get_model('getpaid', 'Payment')
-        order = Order(name='Test EUR order', total='100.00', currency='RUR')
+        order = Order(name='Test EUR order', total='100.00', currency='RUB')
         order.save()
         payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
         payment.save(force_insert=True)
@@ -436,7 +436,7 @@ class PlatronBackendTest(TestCase):
 
     def test_online_payment_ok(self):
         Payment = get_model('getpaid', 'Payment')
-        order = Order(name='Test EUR order', total='100.00', currency='RUR')
+        order = Order(name='Test EUR order', total='100.00', currency='RUB')
         order.save()
         payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
         payment.save(force_insert=True)
@@ -456,7 +456,7 @@ class PlatronBackendTest(TestCase):
 
     def test_online_payment_failure(self):
         Payment = get_model('getpaid', 'Payment')
-        order = Order(name='Test EUR order', total='123.45', currency='RUR')
+        order = Order(name='Test EUR order', total='123.45', currency='RUB')
         order.save()
         payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.platron')
         payment.save(force_insert=True)
@@ -469,3 +469,140 @@ class PlatronBackendTest(TestCase):
 
     def test_failure_fallback(self):
         pass
+
+
+class PayAnyWayBackendTest(TestCase):
+    """
+    def test_online_not_allowed_ip(self):
+        self.assertEqual('IP ERR', getpaid.backends.transferuj.PaymentProcessor.online('0.0.0.0', None,  None, None, None, None, None, None, None, None, None, None))
+
+        #Tests allowing IP given in settings
+        with self.settings(GETPAID_BACKENDS_SETTINGS={
+            'getpaid.backends.transferuj' : {'allowed_ip': ('1.1.1.1', '1.2.3.4'), 'key': ''},
+            }):
+            self.assertEqual('IP ERR', getpaid.backends.transferuj.PaymentProcessor.online('0.0.0.0', None,  None, None, None, None, None, None, None, None, None, None))
+            self.assertNotEqual('IP ERR', getpaid.backends.transferuj.PaymentProcessor.online('1.1.1.1', None,  None, None, None, None, None, None, None, None, None, None))
+            self.assertNotEqual('IP ERR', getpaid.backends.transferuj.PaymentProcessor.online('1.2.3.4', None,  None, None, None, None, None, None, None, None, None, None))
+
+
+        #Tests allowing all IP
+        with self.settings(GETPAID_BACKENDS_SETTINGS={
+            'getpaid.backends.transferuj' : {'allowed_ip': [], 'key': ''},
+            }):
+            self.assertNotEqual('IP ERR', getpaid.backends.transferuj.PaymentProcessor.online('0.0.0.0', None,  None, None, None, None, None, None, None, None, None, None))
+            self.assertNotEqual('IP ERR', getpaid.backends.transferuj.PaymentProcessor.online('1.1.1.1', None,  None, None, None, None, None, None, None, None, None, None))
+            self.assertNotEqual('IP ERR', getpaid.backends.transferuj.PaymentProcessor.online('1.2.3.4', None,  None, None, None, None, None, None, None, None, None, None))
+    """
+
+    def test_online_wrong_sig(self):
+        params = {
+            'command': 'CHECK',
+            'id': '1234',
+            'transaction_id': '1234',
+            'operation_id': '5678',
+            'amount': '123.00',
+            'currency_code': 'RUB',
+            'test_mode': '0',
+            'signature': 'xxx',
+        }
+        self.assertEqual('FAIL SIG ERR', getpaid.backends.payanyway.PaymentProcessor.online(**params))
+        params['signature'] = '102153d9e5b8e97e7f0d608448e3e18f'
+        self.assertNotEqual('FAIL SIG ERR', getpaid.backends.payanyway.PaymentProcessor.online(**params))
+
+    def test_online_wrong_id(self):
+        params = {
+            'command': 'CHECK',
+            'id': 'xxx',
+            'transaction_id': '1234',
+            'operation_id': '5678',
+            'amount': '123.00',
+            'currency_code': 'RUB',
+            'test_mode': '0',
+            'signature': 'd906166977815cc1772aee0ce476afdc',
+        }
+        self.assertEqual('FAIL ID ERR', getpaid.backends.payanyway.PaymentProcessor.online(**params))
+        params['id'] = '1234'
+        params['signature'] = '102153d9e5b8e97e7f0d608448e3e18f'
+        self.assertNotEqual('FAIL ID ERR', getpaid.backends.payanyway.PaymentProcessor.online(**params))
+
+    def test_online_crc_error(self):
+        params = {
+            'command': 'CHECK',
+            'id': '1234',
+            'transaction_id': 'xxx',
+            'operation_id': '5678',
+            'amount': '123.00',
+            'currency_code': 'RUB',
+            'test_mode': '0',
+            'signature': '2c7ead8d6aef684842edb2806b4cb178',
+        }
+        self.assertEqual('FAIL CRC ERR', getpaid.backends.payanyway.PaymentProcessor.online(**params))
+
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test transaction_id', total='123.00', currency='RUB')
+        order.save()
+        payment = Payment(pk=1234, order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.payanyway')
+        payment.save(force_insert=True)
+        params['transaction_id'] = '1234'
+        params['signature'] = '102153d9e5b8e97e7f0d608448e3e18f'
+        self.assertNotEqual('FAIL CRC ERR', getpaid.backends.payanyway.PaymentProcessor.online(**params))
+
+    #def test_check_request
+
+    def test_online_payment_ok(self):
+        params = {
+            'command': '',
+            'id': '1234',
+            'transaction_id': '1234',
+            'operation_id': '5678',
+            'amount': '123.00',
+            'currency_code': 'RUB',
+            'test_mode': '0',
+            'signature': 'dd0c3cb8216302bbd3a1aa21518667bc',
+        }
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test pay', total='123.00', currency='RUB')
+        order.save()
+        payment = Payment(pk=1234, order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.payanyway')
+        payment.save(force_insert=True)
+        self.assertEqual('SUCCESS', getpaid.backends.payanyway.PaymentProcessor.online(**params))
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual(payment.status, 'paid')
+        self.assertNotEqual(payment.paid_on, None)
+        self.assertEqual(payment.amount_paid, Decimal('123.00'))
+
+    """
+    def test_online_payment_ok_over(self):
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='123.45', currency='PLN')
+        order.save()
+        payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.payu')
+        payment.save(force_insert=True)
+        self.assertEqual('TRUE', getpaid.backends.transferuj.PaymentProcessor.online('195.149.229.109', '1234', '1', '', payment.pk, '123.45', '223.45', '', 'TRUE', 0, '', '21b028c2dbdcb9ca272d1cc67ed0574e'))
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual(payment.status, 'paid')
+        self.assertNotEqual(payment.paid_on, None)
+        self.assertEqual(payment.amount_paid, Decimal('223.45'))
+
+    def test_online_payment_partial(self):
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='123.45', currency='PLN')
+        order.save()
+        payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.payu')
+        payment.save(force_insert=True)
+        self.assertEqual('TRUE', getpaid.backends.transferuj.PaymentProcessor.online('195.149.229.109', '1234', '1', '', payment.pk, '123.45', '23.45', '', 'TRUE', 0, '', '21b028c2dbdcb9ca272d1cc67ed0574e'))
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual(payment.status, 'partially_paid')
+        self.assertNotEqual(payment.paid_on, None)
+        self.assertEqual(payment.amount_paid, Decimal('23.45'))
+
+    def test_online_payment_failure(self):
+        Payment = get_model('getpaid', 'Payment')
+        order = Order(name='Test EUR order', total='123.45', currency='PLN')
+        order.save()
+        payment = Payment(order=order, amount=order.total, currency=order.currency, backend='getpaid.backends.payu')
+        payment.save(force_insert=True)
+        self.assertEqual('TRUE', getpaid.backends.transferuj.PaymentProcessor.online('195.149.229.109', '1234', '1', '', payment.pk, '123.45', '23.45', '', False, 0, '', '21b028c2dbdcb9ca272d1cc67ed0574e'))
+        payment = Payment.objects.get(pk=payment.pk)
+        self.assertEqual(payment.status, 'failed')
+    """

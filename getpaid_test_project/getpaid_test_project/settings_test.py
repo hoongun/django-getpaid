@@ -2,17 +2,29 @@
 from settings import *
 
 GETPAID_BACKENDS = ('getpaid.backends.dummy',
+                    'getpaid.backends.payanyway',
                     'getpaid.backends.payu',
                     'getpaid.backends.platron',
                     'getpaid.backends.transferuj',
                     )
 
-INSTALLED_APPS += ('getpaid.backends.payu',
+INSTALLED_APPS += ('getpaid.backends.payanyway',
+                   'getpaid.backends.payu',
                    'getpaid.backends.platron',
                    'getpaid.backends.transferuj',)
 
 GETPAID_BACKENDS_SETTINGS = {
     # Please provide your settings for backends
+    'getpaid.backends.payanyway': {
+        'id': '1111',
+        'key': 'ASDFG',
+        'currency': 'RUB',
+        'method': 'post',
+        'testing': 'True',
+        'test_id': '1234',
+        'test_key': 'AAAAAAAA',
+    },
+
     'getpaid.backends.payu': {
         'pos_id': 123456789,
         'key1': 'xxx',
@@ -25,7 +37,7 @@ GETPAID_BACKENDS_SETTINGS = {
     'getpaid.backends.platron': {
         'id': '1234',
         'key': 'AAAAAAAA',
-        'currency': 'RUR',
+        'currency': 'RUB',
         'testing': 'True',
     },
 

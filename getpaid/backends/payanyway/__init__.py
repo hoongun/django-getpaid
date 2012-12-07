@@ -38,7 +38,7 @@ class PaymentProcessor(PaymentProcessorBase):
         return hashlib.md5(text).hexdigest()
 
     @staticmethod
-    def check(self, payment, *args, **params):
+    def check(payment, **params):
         if not payment:
             params['result_code'] = 302
         elif not params['amount']:
@@ -46,14 +46,17 @@ class PaymentProcessor(PaymentProcessorBase):
             params['amount'] = '%.2f' % Decimal(payment.amount)
         elif payment.status == 'paid':
             params['result_code'] = 200
-        #elif order.is_blocked():
-        #    params['result_code'] = 500
+        elif payment.status == 'failed':
+            params['result_code'] = 500
         else:
             params['result_code'] = 402
         logger.debug('Result code: %s', params['result_code'])
 
         # Send answer
         key = PaymentProcessor.get_backend_setting('key')
+        if bool(PaymentProcessor.get_backend_setting('testing')):
+            key = PaymentProcessor.get_backend_setting('test_key')
+        params['description'] = payment.status
         params['signature'] = PaymentProcessor.compute_sig(params, PaymentProcessor._CHECK_ANSWER_SIG_FIELDS, key)
         return \
         '''<?xml version="1.0" encoding="UTF-8"?>
@@ -74,21 +77,31 @@ class PaymentProcessor(PaymentProcessorBase):
         ''' % params
 
     @staticmethod
-    def online(self, *args, **params):
+    def online(**params):
+        testing = bool(PaymentProcessor.get_backend_setting('testing'))
+        id = PaymentProcessor.get_backend_setting('id')
         key = PaymentProcessor.get_backend_setting('key')
+        if testing:
+            id = PaymentProcessor.get_backend_setting('test_id')
+            key = PaymentProcessor.get_backend_setting('test_key')
+
         if params['signature'] != PaymentProcessor.compute_sig(params, PaymentProcessor._CHECK_SIG_FIELDS, key):
             logger.warning('Got message with wrong sig, %s' % str(params))
-            return 'FAIL'
+            return 'FAIL SIG ERR'
+
+        if params['id'] != id:
+            logger.warning('Got message with wrong id, %s' % str(params))
+            return 'FAIL ID ERR'
 
         Payment = get_model('getpaid', 'Payment')
         try:
             payment = Payment.objects.get(pk=int(params['transaction_id']))
         except (Payment.DoesNotExist, ValueError):
             logger.error('Got message with CRC set to non existing Payment, %s' % str(params))
-            return 'FAIL'
+            return 'FAIL CRC ERR'
 
         if params['command'] == 'CHECK':
-            return PaymentProcessor.check(payment, params)
+            return PaymentProcessor.check(payment, **params)
         elif payment and params['amount']:
             payment.amount_paid = Decimal(params['amount'])
             payment.paid_on = datetime.utcnow().replace(tzinfo=utc)

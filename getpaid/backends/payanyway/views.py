@@ -15,21 +15,31 @@ class OnlineView(View):
     def post(self, request, *args, **kwargs):
         try:
             command = request.POST.get('MNT_COMMAND', '')
+
             id = request.POST['MNT_ID']
             transaction_id = request.POST['MNT_TRANSACTION_ID']
-            operation_id = request.POST.get('MNT_OPERATION_ID', '')
-            amount = request.POST.get('MNT_AMOUNT', '')
             currency_code = request.POST['MNT_CURRENCY_CODE']
             test_mode = request.POST['MNT_TEST_MODE']
-            description = request.POST['MNT_DESCRIPTION']
             signature = request.POST['MNT_SIGNATURE']
+
+            if command:
+                operation_id = request.POST.get('MNT_OPERATION_ID', '')
+                amount = request.POST.get('MNT_AMOUNT', '')
+            else:
+                operation_id = request.POST['MNT_OPERATION_ID']
+                amount = request.POST['MNT_AMOUNT']
+
+            user = request.POST.get('MNT_USER', '')
+            payment_system = request.POST.get('paymentSystem.unitId', '')
+            corraccount = request.POST.get('MNT_CORRACCOUNT', '')
         except KeyError:
             logger.warning('Got malformed POST request: %s' % str(request.POST))
             return HttpResponse('FAIL')
 
-        status = PaymentProcessor.online(command, id, transaction_id,
-                                          operation_id, amount, currency_code,
-                                          test_mode, description, signature)
+        status = PaymentProcessor.online(command=command, id=id, transaction_id=transaction_id,
+                                         operation_id=operation_id, amount=amount,
+                                         currency_code=currency_code, test_mode=test_mode, signature=signature,
+                                         user=user, payment_system=payment_system, corraccount=corraccount)
         return HttpResponse(status)
 
 

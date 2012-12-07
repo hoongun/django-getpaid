@@ -199,7 +199,7 @@ class PaymentProcessor(PaymentProcessorBase):
         del user_data['email']
         del user_data['phone']
         del user_data['lang']
-        if bool(testing):
+        if bool(testing) and 'pg_payment_system' in user_data:
             del user_data['pg_payment_system']
         pg.update([(k, v) for k, v in user_data.items() if k in self._ADDITION_DATA])
 
