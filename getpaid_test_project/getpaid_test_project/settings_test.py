@@ -20,9 +20,10 @@ GETPAID_BACKENDS_SETTINGS = {
         'key': 'ASDFG',
         'currency': 'RUB',
         'method': 'post',
-        'testing': 'True',
-        'test_id': '1234',
-        'test_key': 'AAAAAAAA',
+        'testing': 'False',
+        'demo': 'True',
+        'demo_id': '1234',
+        'demo_key': 'AAAAAAAA',
     },
 
     'getpaid.backends.payu': {

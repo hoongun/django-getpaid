@@ -25,6 +25,7 @@ class PaymentProcessor(PaymentProcessorBase):
     BACKEND = 'getpaid.backends.platron'
     BACKEND_NAME = _('Platron')
     BACKEND_ACCEPTED_CURRENCY = ('RUB', )
+    BACKEND_LOGO_URL = 'getpaid/backends/platron/platron_logo.png'
 
     _INIT_PAYMENT_URL = 'https://www.platron.ru/init_payment.php'
     _ADDITION_DATA = [

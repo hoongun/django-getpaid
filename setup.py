@@ -32,8 +32,16 @@ setup(
             'static/getpaid/backends/dotpay/*',
         ],
 
+        'getpaid.backends.payanyway': [
+            'static/getpaid/backends/payanyway/*',
+        ],
+
         'getpaid.backends.payu': [
             'static/getpaid/backends/payu/*',
+        ],
+
+        'getpaid.backends.platron': [
+            'static/getpaid/backends/platron/*',
         ],
 
         'getpaid.backends.transferuj': [

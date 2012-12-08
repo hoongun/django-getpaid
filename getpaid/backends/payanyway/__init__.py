@@ -20,9 +20,10 @@ class PaymentProcessor(PaymentProcessorBase):
     BACKEND = 'getpaid.backends.payanyway'
     BACKEND_NAME = _('PayAnyWay')
     BACKEND_ACCEPTED_CURRENCY = ('RUB',)
+    BACKEND_LOGO_URL = 'getpaid/backends/payanyway/payanyway_logo.png'
 
     _GATEWAY_URL = 'https://www.payanyway.ru/assistant.htm'
-    _GATEWAY_URL_FOR_TEST = 'https://demo.moneta.ru/assistant.htm'
+    _GATEWAY_URL_FOR_DEMO = 'https://demo.moneta.ru/assistant.htm'
 
     _PAY_FORM_SIG_FIELDS = ('MNT_ID', 'MNT_TRANSACTION_ID', 'MNT_AMOUNT', 'MNT_CURRENCY_CODE', 'MNT_TEST_MODE')
     _PAY_SIG_FIELDS = ('id', 'transaction_id', 'operation_id', 'amount', 'currency_code', 'test_mode')
@@ -54,8 +55,8 @@ class PaymentProcessor(PaymentProcessorBase):
 
         # Send answer
         key = PaymentProcessor.get_backend_setting('key')
-        if bool(PaymentProcessor.get_backend_setting('testing')):
-            key = PaymentProcessor.get_backend_setting('test_key')
+        if bool(PaymentProcessor.get_backend_setting('demo')):
+            key = PaymentProcessor.get_backend_setting('demo_key')
         params['description'] = payment.status
         params['signature'] = PaymentProcessor.compute_sig(params, PaymentProcessor._CHECK_ANSWER_SIG_FIELDS, key)
         return \
@@ -78,12 +79,11 @@ class PaymentProcessor(PaymentProcessorBase):
 
     @staticmethod
     def online(**params):
-        testing = bool(PaymentProcessor.get_backend_setting('testing'))
         id = PaymentProcessor.get_backend_setting('id')
         key = PaymentProcessor.get_backend_setting('key')
-        if testing:
-            id = PaymentProcessor.get_backend_setting('test_id')
-            key = PaymentProcessor.get_backend_setting('test_key')
+        if bool(PaymentProcessor.get_backend_setting('demo')):
+            id = PaymentProcessor.get_backend_setting('demo_id')
+            key = PaymentProcessor.get_backend_setting('demo_key')
 
         if params['signature'] != PaymentProcessor.compute_sig(params, PaymentProcessor._CHECK_SIG_FIELDS, key):
             logger.warning('Got message with wrong sig, %s' % str(params))
@@ -119,13 +119,13 @@ class PaymentProcessor(PaymentProcessorBase):
         id = PaymentProcessor.get_backend_setting('id')
         key = PaymentProcessor.get_backend_setting('key')
         currency = PaymentProcessor.get_backend_setting('currency')
-        testing = PaymentProcessor.get_backend_setting('testing')
+        testing = bool(PaymentProcessor.get_backend_setting('testing'))
 
         gateway_url = self._GATEWAY_URL
-        if testing:
-            gateway_url = self._GATEWAY_URL_FOR_TEST
-            id = PaymentProcessor.get_backend_setting('test_id')
-            key = PaymentProcessor.get_backend_setting('test_key')
+        if bool(PaymentProcessor.get_backend_setting('demo')):
+            gateway_url = self._GATEWAY_URL_FOR_DEMO
+            id = PaymentProcessor.get_backend_setting('demo_id')
+            key = PaymentProcessor.get_backend_setting('demo_key')
 
         user_data = {
             'lang': None,
