@@ -126,7 +126,7 @@ class PaymentProcessor(PaymentProcessorBase):
                 payment.change_status('partially_paid')
         elif result == '0':
             description = pg.get('pg_description', None)
-            logger.info('Non result response: %s', description)
+            logger.info('Non result response: %s', unicode(description).encode('utf-8'))
             if payment.status != 'paid':
                 payment.change_status('failed')
         else:
