@@ -139,6 +139,7 @@ class PaymentProcessor(PaymentProcessorBase):
         key = PaymentProcessor.get_backend_setting('key')
         currency = PaymentProcessor.get_backend_setting('currency')
         testing = PaymentProcessor.get_backend_setting('testing')
+        check_url = PaymentProcessor.get_backend_setting('check_url')
 
         # Special for Platron
         if currency == 'RUB':
@@ -150,7 +151,7 @@ class PaymentProcessor(PaymentProcessorBase):
               'pg_currency': currency,
 
               # Getting from platron settings
-              #'pg_check_url': '',
+              'pg_check_url': check_url,
               #'pg_result_url': '',
               #'pg_refund_url': '',
               #'pg_request_method': '',
@@ -200,6 +201,7 @@ class PaymentProcessor(PaymentProcessorBase):
         del user_data['email']
         del user_data['phone']
         del user_data['lang']
+
         if bool(testing) and 'pg_payment_system' in user_data:
             del user_data['pg_payment_system']
         pg.update([(k, v) for k, v in user_data.items() if k in self._ADDITION_DATA])

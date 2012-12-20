@@ -40,6 +40,7 @@ GETPAID_BACKENDS_SETTINGS = {
         'key': 'AAAAAAAA',
         'currency': 'RUB',
         'testing': 'True',
+        'check_url': '',
     },
 
     'getpaid.backends.transferuj': {
