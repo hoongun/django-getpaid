@@ -27,7 +27,7 @@ class XMLParser(object):
     def to_dict(cls, xml, max_depth=2):
         parser = cls(max_depth)
 
-        xml = parseString(xml)
+        xml = parseString(unicode(xml).encode('utf-8'))
         request = xml.getElementsByTagName('request')
         response = xml.getElementsByTagName('response')
 

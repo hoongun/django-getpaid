@@ -1,9 +1,12 @@
-from django.core.urlresolvers import reverse, resolve
+import logging
+
+from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic.base import View
-from django.views.generic.detail import DetailView
 from getpaid.backends.platron import PaymentProcessor
-from getpaid.models import Payment
+
+
+logger = logging.getLogger('getpaid.backends.platron')
 
 
 class OnlineView(View):
@@ -21,10 +24,11 @@ class OnlineView(View):
         try:
             xml = request.POST['pg_xml']
         except KeyError:
-            #logger.warning('Got malformed POST request: %s' % str(request.POST))
+            logger.warning('Got malformed POST request: %s' % str(request.POST))
             return HttpResponse('MALFORMED')
 
         status = PaymentProcessor.online(xml, self.script_name)
+        logger.debug('Online response: %s, %s', status, xml)
         return HttpResponse(self.get_response(status))
 
 

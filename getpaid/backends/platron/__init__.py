@@ -60,13 +60,14 @@ class PaymentProcessor(PaymentProcessorBase):
 
     @staticmethod
     def compute_sig(script_name, pg, secret_key):
-        logger.debug('To compute: %s', pg)
         sig = ''
         flat_pg, order = PaymentProcessor._get_order(pg)
         for key in order:
             sig += unicode(flat_pg[key]).encode('utf-8') + ';'
-        logger.debug('SIGNATURE: %s', script_name + ';' + sig + secret_key)
-        return hashlib.md5(script_name + ';' + sig + secret_key).hexdigest()
+        to_compute = script_name + ';' + sig + secret_key
+        signature = hashlib.md5(to_compute).hexdigest()
+        logger.debug('%s = %s', to_compute, signature)
+        return signature
 
     @staticmethod
     def generate_salt():
@@ -222,6 +223,7 @@ class PaymentProcessor(PaymentProcessorBase):
         gateway_url, params = '', {}
         if xml_dict['pg_status'] == 'error':
             logging.error('Payment request failed: %s', xml_req)
+            logging.error('Response with failure description: %s', xml_resp)
             params = {'pg_error_code': xml_dict['pg_error_code'],
                       'pg_error_description': xml_dict['pg_error_description'],
                       'pg_order_id': self.payment.pk}
