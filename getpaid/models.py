@@ -109,6 +109,10 @@ class PaymentFactory(models.Model, AbstractMixin):
 from django.db.models.loading import cache as app_cache, register_models
 #from utils import import_backend_modules
 
+
+Payment = None
+
+
 def register_to_payment(order_class, **kwargs):
     """
     A function for registering unaware order class to ``getpaid``. This will
